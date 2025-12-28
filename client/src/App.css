@@ -1,0 +1,23 @@
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.game-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1400px;
+}
+
+@media (min-width: 1024px) {
+  .game-container {
+    flex-direction: row;
+  }
+}
+
