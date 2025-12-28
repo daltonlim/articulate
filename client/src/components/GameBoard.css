@@ -39,6 +39,14 @@
   }
 }
 
+/* Desktop - remove width constraint when in row layout */
+@media (min-width: 1024px) {
+  .game-board-container {
+    width: auto;
+    min-width: 0; /* Allow flex item to shrink if needed */
+  }
+}
+
 .start-game-btn {
   padding: 12px 24px;
   background: #4CAF50;

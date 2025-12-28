@@ -4,14 +4,22 @@
   padding: 15px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: 100%;
 }
 
 @media (min-width: 768px) {
   .game-play-container {
     padding: 20px;
-    min-width: 400px;
+    width: 100%;
     max-width: 500px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .game-play-container {
+    width: 500px;
+    flex-shrink: 0;
+    margin: 0;
   }
 }
 
