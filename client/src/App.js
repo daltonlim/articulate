@@ -21,7 +21,7 @@ function App() {
 
   // Load words.json
   useEffect(() => {
-    fetch('/words.json')
+    fetch(`${process.env.PUBLIC_URL || ''}/words.json`)
       .then(response => response.json())
       .then(data => setWords(data))
       .catch(error => {
@@ -195,6 +195,34 @@ function App() {
     }
   };
 
+  const handleControlTurnGuess = (guessingTeamIndex) => {
+    if (useServer && isConnected) {
+      socket.emit('control-turn-guess', { gameId, guessingTeamIndex });
+    } else if (localGame) {
+      const result = localGame.handleControlTurnGuess(guessingTeamIndex);
+      updateLocalGameState();
+      return result;
+    }
+  };
+
+  const handleControlTurnPass = () => {
+    if (useServer && isConnected) {
+      socket.emit('control-turn-pass', { gameId });
+    } else if (localGame) {
+      localGame.handleControlTurnPass();
+      updateLocalGameState();
+    }
+  };
+
+  const rerollControlCard = () => {
+    if (useServer && isConnected) {
+      socket.emit('reroll-control-card', { gameId });
+    } else if (localGame) {
+      localGame.rerollControlCard();
+      updateLocalGameState();
+    }
+  };
+
   if (!gameState) {
     return (
       <div className="App">
@@ -232,6 +260,9 @@ function App() {
           onDrawSpadeCard={drawSpadeCard}
           onHandleSpade={handleSpade}
           onHandleSpinnerChoice={handleSpinnerChoice}
+          onControlTurnGuess={handleControlTurnGuess}
+          onControlTurnPass={handleControlTurnPass}
+          onRerollControlCard={rerollControlCard}
         />
       </div>
     </div>

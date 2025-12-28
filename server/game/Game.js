@@ -20,6 +20,8 @@ class Game {
     this.turnDuration = turnDuration; // Timer duration in milliseconds (default 30 seconds)
     this.pendingSpinner = null; // Track if spinner should be shown (team index and landing position)
     this.spinnerResult = null; // Store the result of the spinner spin
+    this.finalChallenge = null; // Track final challenge state: { teamIndex, controlCard }
+    this.controlCard = null; // Card for the Control Turn in final challenge
     // Category cycle order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
     // Wildcard picks any random word from any category
     this.categoryCycle = ['Object', 'Action', 'Wildcard', 'World', 'Person', 'Random', 'Nature'];
@@ -39,6 +41,14 @@ class Game {
     if (!this.isStarted) return;
     
     const currentTeam = this.teams[this.currentTeamIndex];
+    
+    // Check if this team is in final challenge state
+    if (this.finalChallenge && this.finalChallenge.teamIndex === this.currentTeamIndex) {
+      // Start the final challenge Control Turn
+      this.startFinalChallenge();
+      return;
+    }
+    
     // Use the team's current category from the cycle, not board position
     const currentCategory = this.categoryCycle[currentTeam.currentCategoryIndex];
     
@@ -78,7 +88,17 @@ class Game {
   handleCorrectGuess() {
     if (!this.currentTurn) return;
     
+    const currentTeam = this.teams[this.currentTeamIndex];
     this.currentTurn.correctCount++;
+    
+    // Check if this correct guess would reach or pass position 60 (finish)
+    const newPosition = currentTeam.position + this.currentTurn.correctCount;
+    if (newPosition >= this.board.totalSpaces) {
+      // Auto-end the turn when reaching position 60
+      this.endTurn(this.currentTurn.correctCount);
+      return;
+    }
+    
     // Draw a new card for the same category (use the turn's category)
     const currentCategory = this.currentTurn.category;
     this.currentCard = this.drawCard(currentCategory);
@@ -96,6 +116,12 @@ class Game {
   endTurn(correctCount) {
     if (!this.currentTurn) return;
     
+    // If this is a Control Turn, it should be handled by handleControlTurnGuess or handleControlTurnPass
+    // Regular endTurn should not be called for Control Turns
+    if (this.currentTurn.isControlTurn) {
+      return;
+    }
+    
     const currentTeam = this.teams[this.currentTeamIndex];
     
     // Use the correct count from the turn if not provided
@@ -110,11 +136,14 @@ class Game {
     
     // Check if team reached or passed finish
     if (newPosition >= this.board.totalSpaces) {
-      // Team must successfully describe at least one word to win
+      // Team must successfully describe at least one word to enter final challenge
       if (moves > 0) {
-        this.winner = currentTeam;
-        this.isStarted = false;
+        // Enter final challenge state instead of winning immediately
         currentTeam.position = this.board.totalSpaces;
+        this.finalChallenge = {
+          teamIndex: this.currentTeamIndex
+        };
+        // Don't advance to next team - they need to complete the final challenge
       } else {
         // They reached finish but didn't get any words - stay at finish, try again next turn
         currentTeam.position = this.board.totalSpaces;
@@ -219,9 +248,11 @@ class Game {
       
       // Check if reached finish
       if (newPosition >= this.board.totalSpaces) {
-        // Team wins if they got at least one word in their turn
-        // (We can't check this here, so we'll let them continue)
+        // Enter final challenge state instead of winning immediately
         currentTeam.position = this.board.totalSpaces;
+        this.finalChallenge = {
+          teamIndex: teamIndex
+        };
       }
       
       // Advance category
@@ -272,6 +303,96 @@ class Game {
     this.spadeCard = this.drawCard('Wildcard');
   }
 
+  startFinalChallenge() {
+    // Start the final challenge Control Turn
+    if (!this.finalChallenge) return;
+    
+    // Draw a random word from any category for the Control entry (marked with spade symbol)
+    // The Control entry can be from any category
+    const allCategories = Object.keys(this.words).filter(cat => cat !== 'Wildcard');
+    const randomCategory = allCategories[Math.floor(Math.random() * allCategories.length)];
+    const wordsInCategory = this.words[randomCategory] || [];
+    
+    if (wordsInCategory.length === 0) {
+      // Fallback to Wildcard if category is empty
+      this.controlCard = this.drawCard('Wildcard');
+    } else {
+      const randomIndex = Math.floor(Math.random() * wordsInCategory.length);
+      this.controlCard = new Card('Control', wordsInCategory[randomIndex]);
+    }
+    
+    // Start a special turn for the Control Turn (no time limit)
+    this.currentTurn = {
+      teamIndex: this.finalChallenge.teamIndex,
+      category: 'Control',
+      correctCount: 0,
+      passedCount: 0,
+      startTime: Date.now(),
+      isControlTurn: true // Mark this as a Control Turn
+    };
+    
+    this.turnStartTime = Date.now();
+  }
+
+  handleControlTurnGuess(guessingTeamIndex) {
+    // Handle a guess during the Control Turn
+    // guessingTeamIndex: the team that made the guess (claims they guessed correctly)
+    if (!this.finalChallenge || !this.controlCard || !this.currentTurn?.isControlTurn) {
+      return { success: false, error: 'No active Control Turn' };
+    }
+    
+    const finishingTeamIndex = this.finalChallenge.teamIndex;
+    
+    // If the finishing team guesses correctly, they win
+    if (guessingTeamIndex === finishingTeamIndex) {
+      const finishingTeam = this.teams[finishingTeamIndex];
+      this.winner = finishingTeam;
+      this.isStarted = false;
+      this.finalChallenge = null;
+      this.controlCard = null;
+      this.currentTurn = null;
+      return { success: true, winner: finishingTeamIndex };
+    } else {
+      // An opponent guessed correctly first - finishing team fails
+      // End the Control Turn, finishing team must wait for next turn
+      this.controlCard = null;
+      this.currentTurn = null;
+      // Move to next team (finishing team stays in final challenge state)
+      this.currentTeamIndex = (this.currentTeamIndex + 1) % this.teams.length;
+      return { success: false, winner: null, message: 'Opponent guessed correctly first' };
+    }
+  }
+
+  handleControlTurnPass() {
+    // Handle pass during Control Turn (no one could guess it)
+    if (!this.finalChallenge || !this.controlCard || !this.currentTurn?.isControlTurn) return;
+    
+    // Finishing team failed - they must wait for next turn
+    this.controlCard = null;
+    this.currentTurn = null;
+    // Don't clear finalChallenge - they stay in final challenge state for next turn
+    // Move to next team
+    this.currentTeamIndex = (this.currentTeamIndex + 1) % this.teams.length;
+  }
+
+  rerollControlCard() {
+    // Reroll the control card (similar to spade pass - draw a new word)
+    if (!this.finalChallenge || !this.currentTurn?.isControlTurn) return;
+    
+    // Draw a new random word from any category for the Control entry
+    const allCategories = Object.keys(this.words).filter(cat => cat !== 'Wildcard');
+    const randomCategory = allCategories[Math.floor(Math.random() * allCategories.length)];
+    const wordsInCategory = this.words[randomCategory] || [];
+    
+    if (wordsInCategory.length === 0) {
+      // Fallback to Wildcard if category is empty
+      this.controlCard = this.drawCard('Wildcard');
+    } else {
+      const randomIndex = Math.floor(Math.random() * wordsInCategory.length);
+      this.controlCard = new Card('Control', wordsInCategory[randomIndex]);
+    }
+  }
+
   handleSpade(winningTeamIndex) {
     // If winningTeamIndex is null/undefined, skip (no team wins)
     if (winningTeamIndex !== null && winningTeamIndex !== undefined) {
@@ -310,7 +431,9 @@ class Game {
       turnDuration: this.turnDuration,
       categoryCycle: this.categoryCycle,
       pendingSpinner: this.pendingSpinner,
-      spinnerResult: this.spinnerResult
+      spinnerResult: this.spinnerResult,
+      finalChallenge: this.finalChallenge,
+      controlCard: this.controlCard ? this.controlCard.getState() : null
     };
   }
 }

@@ -153,6 +153,36 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('control-turn-guess', (data) => {
+    const { gameId, guessingTeamIndex } = data;
+    const game = games.get(gameId);
+    
+    if (game) {
+      const result = game.handleControlTurnGuess(guessingTeamIndex);
+      io.to(gameId).emit('game-updated', { gameState: game.getState(), controlTurnResult: result });
+    }
+  });
+
+  socket.on('control-turn-pass', (data) => {
+    const { gameId } = data;
+    const game = games.get(gameId);
+    
+    if (game) {
+      game.handleControlTurnPass();
+      io.to(gameId).emit('game-updated', { gameState: game.getState() });
+    }
+  });
+
+  socket.on('reroll-control-card', (data) => {
+    const { gameId } = data;
+    const game = games.get(gameId);
+    
+    if (game) {
+      game.rerollControlCard();
+      io.to(gameId).emit('game-updated', { gameState: game.getState() });
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
