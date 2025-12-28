@@ -229,7 +229,8 @@ function App() {
         <GameSetup 
           onCreateGame={createGame}
           onJoinGame={joinGame}
-          isConnected={isConnected || !useServer}
+          isConnected={isConnected}
+          useServer={useServer}
         />
       </div>
     );

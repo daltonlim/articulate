@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './GameSetup.css';
 
-function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
+function GameSetup({ onCreateGame, onJoinGame, isConnected, useServer }) {
   const [teamNames, setTeamNames] = useState(['Team 1', 'Team 2']);
   const [joinGameId, setJoinGameId] = useState('');
   const [mode, setMode] = useState('create'); // 'create' or 'join'
@@ -45,16 +45,22 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
         <h1>🎯 Articulate!</h1>
         <p className="subtitle">The Fast-Talking Description Game</p>
         
-        {!isConnected && (
+        {!isConnected && useServer && (
           <div className="connection-status">
             <span className="status-indicator offline"></span>
-            Playing in local mode (no server required)
+            Server not available - Playing in local mode
           </div>
         )}
-        {isConnected && (
+        {isConnected && useServer && (
           <div className="connection-status">
             <span className="status-indicator online"></span>
             Connected to server
+          </div>
+        )}
+        {!useServer && (
+          <div className="connection-status">
+            <span className="status-indicator offline"></span>
+            Playing in local mode (no server required)
           </div>
         )}
 
@@ -151,7 +157,7 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
                 className="game-id-input"
               />
             </div>
-            <button type="submit" className="primary-btn" disabled={!isConnected || !joinGameId.trim()}>
+            <button type="submit" className="primary-btn" disabled={!isConnected || !useServer || !joinGameId.trim()}>
               Join Game
             </button>
           </form>
