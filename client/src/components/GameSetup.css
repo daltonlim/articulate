@@ -3,23 +3,37 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 15px;
 }
 
 .setup-card {
   background: white;
   border-radius: 20px;
-  padding: 40px;
+  padding: 25px;
   max-width: 500px;
   width: 100%;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .setup-card h1 {
-  font-size: 3em;
+  font-size: 2.2em;
   text-align: center;
   margin-bottom: 10px;
   color: #667eea;
+}
+
+@media (min-width: 768px) {
+  .game-setup {
+    padding: 20px;
+  }
+  
+  .setup-card {
+    padding: 40px;
+  }
+  
+  .setup-card h1 {
+    font-size: 3em;
+  }
 }
 
 .subtitle {
@@ -66,6 +80,7 @@
   cursor: pointer;
   font-size: 1em;
   transition: all 0.3s;
+  min-height: 44px; /* Touch-friendly */
 }
 
 .mode-selector button.active {
@@ -103,11 +118,12 @@
   border: 2px solid #ddd;
   border-radius: 8px;
   font-size: 1em;
+  min-height: 44px; /* Touch-friendly */
 }
 
 .remove-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: #f44336;
   color: white;
@@ -118,10 +134,11 @@
   align-items: center;
   justify-content: center;
   line-height: 1;
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 .add-team-btn {
-  padding: 10px;
+  padding: 12px;
   border: 2px dashed #ddd;
   background: white;
   border-radius: 8px;
@@ -129,6 +146,7 @@
   color: #667eea;
   font-size: 0.9em;
   transition: all 0.3s;
+  min-height: 44px; /* Touch-friendly */
 }
 
 .add-team-btn:hover {
@@ -140,10 +158,18 @@
   padding: 12px;
   border: 2px solid #ddd;
   border-radius: 8px;
-  font-size: 1.2em;
+  font-size: 1.1em;
   text-align: center;
   letter-spacing: 0.2em;
   text-transform: uppercase;
+  min-height: 44px; /* Touch-friendly */
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .game-id-input {
+    font-size: 1.2em;
+  }
 }
 
 .primary-btn {
@@ -156,6 +182,8 @@
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
+  min-height: 44px; /* Touch-friendly */
+  width: 100%;
 }
 
 .primary-btn:hover:not(:disabled) {

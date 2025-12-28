@@ -12,16 +12,9 @@ function GameBoard({ gameState, onStartGame }) {
 
   const getCategoryForPosition = (position) => {
     if (position >= board.totalSpaces) return null;
-    // Each position cycles through categories: 0=Object, 1=Action, 2=Random, 3=World, 4=Person, 5=Nature, 6=Object, etc.
+    // Cycle through categories per space in order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
     const categoryIndex = position % cycle.length;
     return cycle[categoryIndex];
-  };
-
-  const getSpaceTypeForPosition = (position, board) => {
-    if (position >= board.totalSpaces) return 'finish';
-    if (board.spadeSpaces.includes(position)) return 'spade';
-    if (board.spinnerSpaces.includes(position)) return 'spinner';
-    return 'normal';
   };
 
   const renderBoard = () => {
@@ -29,39 +22,29 @@ function GameBoard({ gameState, onStartGame }) {
     const totalSpaces = board.totalSpaces;
 
     for (let i = 0; i <= totalSpaces; i++) {
-      const spaceType = getSpaceTypeForPosition(i, board);
+      const category = getCategoryForPosition(i);
       
       // Use modulo to determine color based on category cycle position
-      // Each category gets 10 spaces: 0-9, 10-19, 20-29, etc.
+      // Categories cycle per space: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature, then repeats
       let color = '#CCCCCC';
       if (i === totalSpaces) {
         color = '#FFD700'; // Gold for finish
-      } else if (spaceType === 'spade') {
-        color = 'white'; // White for spade spaces
-      } else if (spaceType === 'spinner') {
-        color = '#FF9800'; // Orange for spinner spaces
       } else {
-        // Use modulo to cycle through categories: 0=Object, 1=Action, 2=Random, 3=World, 4=Person, 5=Nature, 6=Object, etc.
-        const categoryIndex = i % cycle.length;
-        const category = cycle[categoryIndex];
         color = board.categoryColors[category] || '#CCCCCC';
       }
-      
-      const category = getCategoryForPosition(i);
       
       const teamPieces = teams.filter(team => team.position === i);
       
       spaces.push(
         <div
           key={i}
-          className={`board-space ${spaceType} ${i === totalSpaces ? 'finish' : ''}`}
+          className={`board-space ${i === totalSpaces ? 'finish' : ''}`}
           style={{ backgroundColor: color }}
           title={`${category} - Position ${i}`}
         >
           {i === 0 && <span className="start-label">START</span>}
           {i === totalSpaces && <span className="finish-label">FINISH</span>}
-          {spaceType === 'spade' && <span className="spade-icon">♠</span>}
-          {spaceType === 'spinner' && <span className="spinner-icon">⟲</span>}
+          {category === 'Wildcard' && <span className="spade-icon">♠</span>}
           {teamPieces.map(team => (
             <div
               key={team.index}

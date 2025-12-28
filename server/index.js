@@ -122,6 +122,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('draw-spade-card', (data) => {
+    const { gameId } = data;
+    const game = games.get(gameId);
+    
+    if (game) {
+      game.drawSpadeCard();
+      io.to(gameId).emit('game-updated', { gameState: game.getState() });
+    }
+  });
+
   socket.on('handle-spade', (data) => {
     const { gameId, winningTeamIndex } = data;
     const game = games.get(gameId);

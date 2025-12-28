@@ -8,33 +8,27 @@ function GamePlay({
   onCorrectGuess,
   onPass,
   onEndTurn,
-  onSpinSpinner,
+  onDrawSpadeCard,
   onHandleSpade
 }) {
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
-  const [showSpinnerModal, setShowSpinnerModal] = useState(false);
   const [showSpadeModal, setShowSpadeModal] = useState(false);
+  const [spadeHandledForPosition, setSpadeHandledForPosition] = useState(null);
+  const [isHandlingSpade, setIsHandlingSpade] = useState(false);
 
   // Helper functions - defined before use
-  const getCategoryForPosition = (position, board) => {
+  const getCategoryForPosition = (position, board, categoryCycle) => {
     if (!board || position >= board.totalSpaces) return null;
-    const categoryIndex = Math.floor(position / 10) % board.categories.length;
-    return board.categories[categoryIndex];
+    const cycle = categoryCycle || ['Object', 'Action', 'Wildcard', 'World', 'Person', 'Random', 'Nature'];
+    const categoryIndex = position % cycle.length;
+    return cycle[categoryIndex];
   };
 
   const getCategoryColor = (category) => {
     if (!gameState?.board) return '#CCCCCC';
     return gameState.board.categoryColors[category] || '#CCCCCC';
-  };
-
-  const getSpaceType = (position, board) => {
-    if (!board) return 'normal';
-    if (position >= board.totalSpaces) return 'finish';
-    if (board.spadeSpaces.includes(position)) return 'spade';
-    if (board.spinnerSpaces.includes(position)) return 'spinner';
-    return 'normal';
   };
 
   useEffect(() => {
@@ -75,21 +69,43 @@ function GamePlay({
     };
   }, [isTimerRunning, timeRemaining, gameState]);
 
-  // Check for special spaces after turn ends
+  // Check for spade (Wildcard category) after turn ends
+  // Note: When a turn ends, currentTeamIndex is already incremented to the next team
+  // So we need to check the team that just ended their turn (previous team index)
   useEffect(() => {
-    if (gameState?.teams && gameState.currentTeamIndex !== undefined && !gameState.currentTurn) {
-      const currentTeam = gameState.teams[gameState.currentTeamIndex];
-      if (currentTeam && !gameState.winner) {
-        const spaceType = getSpaceType(currentTeam.position, gameState.board);
-        // Only show modals if we're not already showing one
-        if (spaceType === 'spinner' && !showSpinnerModal && !showSpadeModal) {
-          setShowSpinnerModal(true);
-        } else if (spaceType === 'spade' && !showSpadeModal && !showSpinnerModal) {
-          setShowSpadeModal(true);
+    if (gameState?.teams && gameState.currentTeamIndex !== undefined && !gameState.currentTurn && !gameState.winner && !gameState.isBonusTurn) {
+      // The team that just ended their turn is at the previous index
+      const previousTeamIndex = (gameState.currentTeamIndex - 1 + gameState.teams.length) % gameState.teams.length;
+      const teamThatJustMoved = gameState.teams[previousTeamIndex];
+      
+      if (teamThatJustMoved) {
+        const category = getCategoryForPosition(teamThatJustMoved.position, gameState.board, gameState.categoryCycle);
+        const positionKey = `${previousTeamIndex}-${teamThatJustMoved.position}`;
+        
+        // Reset handled position if team has moved to a different position
+        if (spadeHandledForPosition && !spadeHandledForPosition.startsWith(`${previousTeamIndex}-`)) {
+          setSpadeHandledForPosition(null);
+        }
+        
+        // Show spade modal when landing on Wildcard category and spadeCard exists
+        // Only show if: category is Wildcard, modal is not already showing, we haven't handled it for this position yet
+        if (category === 'Wildcard' && !showSpadeModal && spadeHandledForPosition !== positionKey) {
+          if (gameState.spadeCard) {
+            // Spade card already drawn, show the modal
+            setShowSpadeModal(true);
+          } else if (!spadeHandledForPosition) {
+            // Draw a random word for the spade (only if we haven't handled a spade recently)
+            onDrawSpadeCard();
+          }
         }
       }
     }
-  }, [gameState, showSpinnerModal, showSpadeModal]);
+    
+    // Clear spade modal if spadeCard is cleared (handled on server)
+    if (!gameState?.spadeCard && showSpadeModal) {
+      setShowSpadeModal(false);
+    }
+  }, [gameState, showSpadeModal, spadeHandledForPosition]);
 
   const handleStartTurn = () => {
     setTimeRemaining(30);
@@ -113,14 +129,50 @@ function GamePlay({
     onPass();
   };
 
-  const handleSpin = () => {
-    onSpinSpinner();
-    setShowSpinnerModal(false);
+  const handleSpadeWin = (teamIndex) => {
+    if (isHandlingSpade) return; // Prevent multiple clicks
+    setIsHandlingSpade(true);
+    
+    // Close modal immediately to prevent re-triggering
+    setShowSpadeModal(false);
+    
+    // Mark this position as handled to prevent re-opening the modal
+    if (gameState?.teams && gameState.currentTeamIndex !== undefined) {
+      const previousTeamIndex = (gameState.currentTeamIndex - 1 + gameState.teams.length) % gameState.teams.length;
+      const teamThatJustMoved = gameState.teams[previousTeamIndex];
+      if (teamThatJustMoved) {
+        const positionKey = `${previousTeamIndex}-${teamThatJustMoved.position}`;
+        setSpadeHandledForPosition(positionKey);
+      }
+    }
+    
+    onHandleSpade(teamIndex);
+    
+    // Reset after a short delay to allow server to process
+    setTimeout(() => setIsHandlingSpade(false), 1000);
   };
 
-  const handleSpadeWin = (teamIndex) => {
-    onHandleSpade(teamIndex);
+  const handleSpadeSkip = () => {
+    if (isHandlingSpade) return; // Prevent multiple clicks
+    setIsHandlingSpade(true);
+    
+    // Close modal immediately to prevent re-triggering
     setShowSpadeModal(false);
+    
+    // Mark this position as handled to prevent re-opening the modal
+    if (gameState?.teams && gameState.currentTeamIndex !== undefined) {
+      const previousTeamIndex = (gameState.currentTeamIndex - 1 + gameState.teams.length) % gameState.teams.length;
+      const teamThatJustMoved = gameState.teams[previousTeamIndex];
+      if (teamThatJustMoved) {
+        const positionKey = `${previousTeamIndex}-${teamThatJustMoved.position}`;
+        setSpadeHandledForPosition(positionKey);
+      }
+    }
+    
+    onHandleSpade(null); // Pass null to skip
+    
+    // Reset after a short delay to allow server to process
+    setTimeout(() => setIsHandlingSpade(false), 1000);
   };
 
   if (!gameState) return null;
@@ -146,7 +198,19 @@ function GamePlay({
       {gameState.isStarted && (
         <>
           <div className="current-team-display">
-            <h3>Current Team: {currentTeam?.name}</h3>
+            <h3>
+              Current Team: {currentTeam?.name}
+              {gameState.isBonusTurn && (
+                <span style={{ 
+                  marginLeft: '10px', 
+                  fontSize: '0.7em', 
+                  color: '#FFD700',
+                  fontWeight: 'bold'
+                }}>
+                  ⭐ BONUS TURN
+                </span>
+              )}
+            </h3>
             <div 
               className="category-badge"
               style={{ backgroundColor: getCategoryColor(currentCategory) }}
@@ -155,14 +219,16 @@ function GamePlay({
             </div>
           </div>
 
-          {!gameState.currentTurn && !showSpinnerModal && !showSpadeModal && !gameState.winner && (
+          {!gameState.currentTurn && !showSpadeModal && !gameState.winner && (
             <button 
               onClick={handleStartTurn} 
               className="start-turn-btn"
             >
               {currentTeam?.position >= gameState.board.totalSpaces 
                 ? "Final Challenge - Start Turn" 
-                : "Start Turn"}
+                : gameState.isBonusTurn 
+                  ? "Start Bonus Turn" 
+                  : "Start Turn"}
             </button>
           )}
 
@@ -220,39 +286,56 @@ function GamePlay({
             </div>
           )}
 
-          {showSpinnerModal && (
-            <div className="modal-overlay">
-              <div className="modal-content">
-                <h3>Spinner Space!</h3>
-                <p>You landed on a spinner space. Spin to move forward or move an opponent back!</p>
-                <div className="spinner-options">
-                  <button 
-                    onClick={handleSpin}
-                    className="spinner-btn wide"
-                  >
-                    Spin the Spinner!
-                  </button>
-                  <p className="spinner-note">The spinner will randomly move you forward or move an opponent back</p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {showSpadeModal && (
             <div className="modal-overlay">
               <div className="modal-content">
                 <h3>Spade Space - Free for All!</h3>
                 <p>The describer describes the word to everyone. Which team guessed correctly first?</p>
+                
+                {gameState.spadeCard && (
+                  <div className="spade-card-display" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+                    <div className="spade-card-category" style={{ 
+                      backgroundColor: getCategoryColor(gameState.spadeCard.category),
+                      padding: '5px 10px',
+                      borderRadius: '4px',
+                      display: 'inline-block',
+                      marginBottom: '10px',
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }}>
+                      {gameState.spadeCard.category}
+                    </div>
+                    <div className="spade-card-word" style={{ fontSize: '1.5em', fontWeight: 'bold', marginTop: '10px' }}>
+                      {gameState.spadeCard.word}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="spade-options">
                   {gameState.teams.map((team) => (
                     <button
                       key={team.index}
                       onClick={() => handleSpadeWin(team.index)}
                       className="spade-btn"
+                      disabled={isHandlingSpade}
+                      style={{ opacity: isHandlingSpade ? 0.6 : 1, cursor: isHandlingSpade ? 'not-allowed' : 'pointer' }}
                     >
                       {team.name}
                     </button>
                   ))}
+                  <button
+                    onClick={handleSpadeSkip}
+                    className="spade-btn skip-btn"
+                    disabled={isHandlingSpade}
+                    style={{ 
+                      backgroundColor: '#999', 
+                      marginTop: '10px',
+                      opacity: isHandlingSpade ? 0.6 : 1,
+                      cursor: isHandlingSpade ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Skip
+                  </button>
                 </div>
               </div>
             </div>

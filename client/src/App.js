@@ -83,6 +83,10 @@ function App() {
     socket.emit('spin-spinner', { gameId });
   };
 
+  const drawSpadeCard = () => {
+    socket.emit('draw-spade-card', { gameId });
+  };
+
   const handleSpade = (winningTeamIndex) => {
     socket.emit('handle-spade', { gameId, winningTeamIndex });
   };
@@ -110,6 +114,7 @@ function App() {
           onPass={handlePass}
           onEndTurn={endTurn}
           onSpinSpinner={spinSpinner}
+          onDrawSpadeCard={drawSpadeCard}
           onHandleSpade={handleSpade}
         />
         <GamePlay 
@@ -120,6 +125,7 @@ function App() {
           onPass={handlePass}
           onEndTurn={endTurn}
           onSpinSpinner={spinSpinner}
+          onDrawSpadeCard={drawSpadeCard}
           onHandleSpade={handleSpade}
         />
       </div>

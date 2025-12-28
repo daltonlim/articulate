@@ -1,35 +1,26 @@
 class Board {
   constructor() {
     this.totalSpaces = 60; // Total spaces on the board
-    this.categories = ['Object', 'Nature', 'Random', 'Person', 'Action', 'World'];
+    // Category cycle order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
+    this.categories = ['Object', 'Action', 'Wildcard', 'World', 'Person', 'Random', 'Nature'];
     this.categoryColors = {
       'Object': '#64B5F6',      // Light Blue
       'Action': '#FF9800',      // Orange
       'Wildcard': '#FFFFFF',    // White (Spades)
-      'Random': '#F44336',      // Red
       'World': '#1976D2',       // Navy Blue
       'Person': '#FFEB3B',      // Yellow
+      'Random': '#F44336',      // Red
       'Nature': '#4CAF50'       // Green
     };
     
-    // Define special spaces
-    this.spadeSpaces = [5, 15, 25, 35, 45, 55]; // White/Spade spaces
-    this.spinnerSpaces = [10, 20, 30, 40, 50]; // Orange/Spinner spaces
     this.finishSpace = this.totalSpaces;
   }
 
   getCategoryAtPosition(position) {
     if (position >= this.totalSpaces) return null;
-    // Each category gets 10 spaces in rotation
-    const categoryIndex = Math.floor(position / 10) % this.categories.length;
+    // Cycle through categories per space in order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
+    const categoryIndex = position % this.categories.length;
     return this.categories[categoryIndex];
-  }
-
-  getSpaceTypeAtPosition(position) {
-    if (position >= this.totalSpaces) return 'finish';
-    if (this.spadeSpaces.includes(position)) return 'spade';
-    if (this.spinnerSpaces.includes(position)) return 'spinner';
-    return 'normal';
   }
 
   getColorAtPosition(position) {
@@ -42,8 +33,6 @@ class Board {
       totalSpaces: this.totalSpaces,
       categories: this.categories,
       categoryColors: this.categoryColors,
-      spadeSpaces: this.spadeSpaces,
-      spinnerSpaces: this.spinnerSpaces,
       finishSpace: this.finishSpace
     };
   }

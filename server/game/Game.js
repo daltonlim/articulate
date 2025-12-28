@@ -13,6 +13,9 @@ class Game {
     this.isStarted = false;
     this.winner = null;
     this.currentCard = null;
+    this.spadeCard = null; // Card for spade/wildcard space
+    this.isBonusTurn = false; // Track if current turn is a bonus turn from spade
+    this.nextTeamAfterBonus = null; // Track which team should play after bonus turn
     this.turnStartTime = null;
     this.turnDuration = 30000; // 30 seconds in milliseconds
     // Category cycle order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
@@ -117,8 +120,17 @@ class Game {
       }
     } else {
       currentTeam.position = newPosition;
-      // Move to next team
-      this.currentTeamIndex = (this.currentTeamIndex + 1) % this.teams.length;
+      
+      // If this was a bonus turn, move to the next team after bonus
+      // Otherwise, move to next team in normal rotation
+      if (this.isBonusTurn && this.nextTeamAfterBonus !== null) {
+        this.currentTeamIndex = this.nextTeamAfterBonus;
+        this.isBonusTurn = false;
+        this.nextTeamAfterBonus = null;
+      } else {
+        // Move to next team in normal rotation
+        this.currentTeamIndex = (this.currentTeamIndex + 1) % this.teams.length;
+      }
     }
     
     this.currentTurn = null;
@@ -146,15 +158,24 @@ class Game {
     return { type: spinResult, spaces };
   }
 
+  drawSpadeCard() {
+    // Draw a random word for the spade/wildcard space
+    this.spadeCard = this.drawCard('Wildcard');
+  }
+
   handleSpade(winningTeamIndex) {
-    const winningTeam = this.teams[winningTeamIndex];
-    winningTeam.position = Math.min(
-      winningTeam.position + 1,
-      this.board.totalSpaces
-    );
+    // If winningTeamIndex is null/undefined, skip (no team wins)
+    if (winningTeamIndex !== null && winningTeamIndex !== undefined) {
+      // The winning team gets a bonus turn (no position advancement)
+      // After the bonus turn, continue with the next team in rotation
+      // (currentTeamIndex is already the next team after the one that landed on spade)
+      this.nextTeamAfterBonus = this.currentTeamIndex;
+      this.isBonusTurn = true;
+      this.currentTeamIndex = winningTeamIndex;
+    }
     
-    // The winning team gets the next turn
-    this.currentTeamIndex = winningTeamIndex;
+    // Clear the spade card after handling
+    this.spadeCard = null;
   }
 
   getState() {
@@ -170,6 +191,8 @@ class Game {
       currentTeamIndex: this.currentTeamIndex,
       currentTurn: this.currentTurn,
       currentCard: this.currentCard ? this.currentCard.getState() : null,
+      spadeCard: this.spadeCard ? this.spadeCard.getState() : null,
+      isBonusTurn: this.isBonusTurn,
       isStarted: this.isStarted,
       winner: this.winner ? this.winner.getState() : null,
       turnTimeRemaining: this.turnStartTime 

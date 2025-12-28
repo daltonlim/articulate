@@ -1,10 +1,18 @@
 .game-play-container {
   background: white;
   border-radius: 20px;
-  padding: 30px;
+  padding: 15px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  min-width: 400px;
-  max-width: 500px;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .game-play-container {
+    padding: 20px;
+    min-width: 400px;
+    max-width: 500px;
+  }
 }
 
 .game-id-display {
@@ -38,31 +46,51 @@
 .current-team-display h3 {
   color: #333;
   margin-bottom: 10px;
-  font-size: 1.5em;
+  font-size: 1.2em;
 }
 
 .category-badge {
   display: inline-block;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 20px;
   color: white;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: 0.95em;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .current-team-display h3 {
+    font-size: 1.5em;
+  }
+  
+  .category-badge {
+    padding: 10px 20px;
+    font-size: 1.1em;
+  }
 }
 
 .start-turn-btn {
   width: 100%;
-  padding: 20px;
+  padding: 16px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: 1.3em;
+  font-size: 1.1em;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  min-height: 44px; /* Touch-friendly */
+}
+
+@media (min-width: 768px) {
+  .start-turn-btn {
+    padding: 20px;
+    font-size: 1.3em;
+    margin-bottom: 20px;
+  }
 }
 
 .start-turn-btn:hover {
@@ -81,20 +109,29 @@
 }
 
 .timer-circle {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3em;
+  font-size: 2.5em;
   font-weight: bold;
   margin: 0 auto;
-  border: 5px solid white;
+  border: 4px solid white;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
   transition: all 0.3s;
+}
+
+@media (min-width: 768px) {
+  .timer-circle {
+    width: 120px;
+    height: 120px;
+    font-size: 3em;
+    border: 5px solid white;
+  }
 }
 
 .timer-circle.warning {
@@ -111,31 +148,48 @@
 .card-display {
   background: #f9f9f9;
   border-radius: 12px;
-  padding: 30px;
+  padding: 20px;
   text-align: center;
   border: 3px solid #ddd;
 }
 
 .card-category {
   display: inline-block;
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: 20px;
   color: white;
   font-weight: bold;
-  margin-bottom: 20px;
-  font-size: 0.9em;
+  margin-bottom: 15px;
+  font-size: 0.85em;
 }
 
 .card-word {
-  font-size: 2.5em;
+  font-size: 1.8em;
   font-weight: bold;
   color: #333;
   word-break: break-word;
+  line-height: 1.2;
+}
+
+@media (min-width: 768px) {
+  .card-display {
+    padding: 30px;
+  }
+  
+  .card-category {
+    padding: 8px 16px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+  }
+  
+  .card-word {
+    font-size: 2.5em;
+  }
 }
 
 .turn-stats {
   display: flex;
-  gap: 20px;
+  gap: 10px;
   justify-content: center;
 }
 
@@ -143,22 +197,43 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 15px;
+  padding: 12px;
   background: #f5f5f5;
   border-radius: 10px;
-  min-width: 100px;
+  min-width: 80px;
+  flex: 1;
 }
 
 .stat-label {
-  font-size: 0.9em;
+  font-size: 0.85em;
   color: #666;
   margin-bottom: 5px;
 }
 
 .stat-value {
-  font-size: 2em;
+  font-size: 1.6em;
   font-weight: bold;
   color: #667eea;
+}
+
+@media (min-width: 768px) {
+  .turn-stats {
+    gap: 20px;
+  }
+  
+  .stat {
+    padding: 15px;
+    min-width: 100px;
+    flex: 0 1 auto;
+  }
+  
+  .stat-label {
+    font-size: 0.9em;
+  }
+  
+  .stat-value {
+    font-size: 2em;
+  }
 }
 
 .turn-actions {
@@ -168,13 +243,21 @@
 }
 
 .action-btn {
-  padding: 15px;
+  padding: 14px;
   border: none;
   border-radius: 8px;
-  font-size: 1.1em;
+  font-size: 1em;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
+  min-height: 44px; /* Touch-friendly */
+}
+
+@media (min-width: 768px) {
+  .action-btn {
+    padding: 15px;
+    font-size: 1.1em;
+  }
 }
 
 .correct-btn {
@@ -226,22 +309,41 @@
 .modal-content {
   background: white;
   border-radius: 20px;
-  padding: 40px;
+  padding: 25px;
   max-width: 500px;
   width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
+  margin: 20px;
 }
 
 .modal-content h3 {
   color: #333;
   margin-bottom: 15px;
-  font-size: 1.8em;
+  font-size: 1.4em;
 }
 
 .modal-content p {
   color: #666;
-  margin-bottom: 30px;
-  font-size: 1.1em;
+  margin-bottom: 20px;
+  font-size: 1em;
+}
+
+@media (min-width: 768px) {
+  .modal-content {
+    padding: 40px;
+    margin: 0;
+  }
+  
+  .modal-content h3 {
+    font-size: 1.8em;
+  }
+  
+  .modal-content p {
+    margin-bottom: 30px;
+    font-size: 1.1em;
+  }
 }
 
 .spinner-options,
@@ -253,14 +355,23 @@
 
 .spinner-btn,
 .spade-btn {
-  padding: 15px;
+  padding: 14px;
   border: none;
   border-radius: 8px;
-  font-size: 1.1em;
+  font-size: 1em;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
   color: white;
+  min-height: 44px; /* Touch-friendly */
+}
+
+@media (min-width: 768px) {
+  .spinner-btn,
+  .spade-btn {
+    padding: 15px;
+    font-size: 1.1em;
+  }
 }
 
 .spinner-btn.wide {
@@ -298,7 +409,13 @@
 }
 
 .winner-display h2 {
-  font-size: 2em;
+  font-size: 1.5em;
+}
+
+@media (min-width: 768px) {
+  .winner-display h2 {
+    font-size: 2em;
+  }
 }
 
 .golden-rules {
