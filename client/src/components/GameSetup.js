@@ -48,7 +48,13 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
         {!isConnected && (
           <div className="connection-status">
             <span className="status-indicator offline"></span>
-            Connecting to server...
+            Playing in local mode (no server required)
+          </div>
+        )}
+        {isConnected && (
+          <div className="connection-status">
+            <span className="status-indicator online"></span>
+            Connected to server
           </div>
         )}
 
@@ -127,7 +133,7 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
                 className="timer-input"
               />
             </div>
-            <button type="submit" className="primary-btn" disabled={!isConnected}>
+            <button type="submit" className="primary-btn">
               Create Game
             </button>
           </form>
