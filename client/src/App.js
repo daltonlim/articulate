@@ -91,6 +91,10 @@ function App() {
     socket.emit('handle-spade', { gameId, winningTeamIndex });
   };
 
+  const handleSpinnerChoice = (choice) => {
+    socket.emit('handle-spinner-choice', { gameId, choice });
+  };
+
   if (!gameState) {
     return (
       <div className="App">
@@ -127,6 +131,7 @@ function App() {
           onSpinSpinner={spinSpinner}
           onDrawSpadeCard={drawSpadeCard}
           onHandleSpade={handleSpade}
+          onHandleSpinnerChoice={handleSpinnerChoice}
         />
       </div>
     </div>

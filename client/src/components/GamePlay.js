@@ -9,7 +9,9 @@ function GamePlay({
   onPass,
   onEndTurn,
   onDrawSpadeCard,
-  onHandleSpade
+  onHandleSpade,
+  onHandleSpinnerChoice,
+  onSpinSpinner
 }) {
   const [timeRemaining, setTimeRemaining] = useState(30);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -17,6 +19,9 @@ function GamePlay({
   const [showSpadeModal, setShowSpadeModal] = useState(false);
   const [spadeHandledForPosition, setSpadeHandledForPosition] = useState(null);
   const [isHandlingSpade, setIsHandlingSpade] = useState(false);
+  const [showSpinnerModal, setShowSpinnerModal] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [isHandlingSpinner, setIsHandlingSpinner] = useState(false);
 
   // Helper functions - defined before use
   const getCategoryForPosition = (position, board, categoryCycle) => {
@@ -73,11 +78,31 @@ function GamePlay({
     };
   }, [isTimerRunning, timeRemaining, gameState, correctCount, onEndTurn]);
 
+  // Check for spinner (Orange/Action or Red/Random) after turn ends
+  useEffect(() => {
+    if (gameState?.pendingSpinner && !showSpinnerModal) {
+      // Show spinner modal when pendingSpinner exists
+      setShowSpinnerModal(true);
+      setIsSpinning(false); // Reset spinning state when modal first shows
+    }
+    
+    // When spinner result arrives, stop showing "Spinning..."
+    if (gameState?.spinnerResult) {
+      setIsSpinning(false);
+    }
+    
+    // Clear spinner modal if pendingSpinner is cleared (handled on server)
+    if (!gameState?.pendingSpinner && showSpinnerModal) {
+      setShowSpinnerModal(false);
+      setIsSpinning(false);
+    }
+  }, [gameState, showSpinnerModal]);
+
   // Check for spade (Wildcard category) after turn ends
   // Note: When a turn ends, currentTeamIndex is already incremented to the next team
   // So we need to check the team that just ended their turn (previous team index)
   useEffect(() => {
-    if (gameState?.teams && gameState.currentTeamIndex !== undefined && !gameState.currentTurn && !gameState.winner && !gameState.isBonusTurn) {
+    if (gameState?.teams && gameState.currentTeamIndex !== undefined && !gameState.currentTurn && !gameState.winner && !gameState.isBonusTurn && !gameState.pendingSpinner) {
       // The team that just ended their turn is at the previous index
       const previousTeamIndex = (gameState.currentTeamIndex - 1 + gameState.teams.length) % gameState.teams.length;
       const teamThatJustMoved = gameState.teams[previousTeamIndex];
@@ -169,6 +194,28 @@ function GamePlay({
     setTimeout(() => setIsHandlingSpade(false), 500);
   };
 
+  const handleSpinSpinner = () => {
+    if (isSpinning || !gameState?.pendingSpinner || gameState?.spinnerResult) return;
+    
+    // Set spinning state to true and trigger the spin on the server
+    setIsSpinning(true);
+    onSpinSpinner();
+  };
+
+  const handleSpinnerChoice = (choice) => {
+    if (isHandlingSpinner) return; // Prevent multiple clicks
+    setIsHandlingSpinner(true);
+    
+    // Close modal immediately
+    setShowSpinnerModal(false);
+    
+    // Send choice to server
+    onHandleSpinnerChoice(choice);
+    
+    // Reset after a short delay to allow server to process
+    setTimeout(() => setIsHandlingSpinner(false), 1000);
+  };
+
   if (!gameState) return null;
 
   const currentTeam = gameState.teams[gameState.currentTeamIndex];
@@ -213,7 +260,7 @@ function GamePlay({
             </div>
           </div>
 
-          {!gameState.currentTurn && !showSpadeModal && !gameState.winner && (
+          {!gameState.currentTurn && !showSpadeModal && !showSpinnerModal && !gameState.winner && (
             <button 
               onClick={handleStartTurn} 
               className="start-turn-btn"
@@ -276,6 +323,96 @@ function GamePlay({
                 >
                   End Turn ({correctCount} moves)
                 </button>
+              </div>
+            </div>
+          )}
+
+          {showSpinnerModal && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <h3>🎯 Spinner - Sabotage Mechanic!</h3>
+                <p>You landed on an Orange or Red space! Spin the arrow to get a bonus or sabotage an opponent.</p>
+                
+                {!gameState.spinnerResult ? (
+                  <div>
+                    <button
+                      onClick={handleSpinSpinner}
+                      className="spinner-btn"
+                      disabled={isSpinning || isHandlingSpinner}
+                      style={{ 
+                        backgroundColor: '#FF9800',
+                        fontSize: '1.2em',
+                        padding: '20px',
+                        marginTop: '20px',
+                        opacity: (isSpinning || isHandlingSpinner) ? 0.6 : 1,
+                        cursor: (isSpinning || isHandlingSpinner) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isSpinning ? 'Spinning...' : '🎰 Spin the Arrow!'}
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {gameState.spinnerResult.type === 'no-bonus' ? (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '1.5em', marginBottom: '10px' }}>❌ No Bonus</div>
+                        <p>The arrow landed on Orange or Red. Your turn ends here.</p>
+                        <button
+                          onClick={() => handleSpinnerChoice('no-bonus')}
+                          className="spinner-btn"
+                          disabled={isHandlingSpinner}
+                          style={{ 
+                            backgroundColor: '#999',
+                            marginTop: '15px',
+                            opacity: isHandlingSpinner ? 0.6 : 1,
+                            cursor: isHandlingSpinner ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ fontSize: '1.5em', marginBottom: '15px', fontWeight: 'bold' }}>
+                          {gameState.spinnerResult.type === 'wide-green' ? '🟢 Wide Green Segment!' : '🟢 Narrow Green Segment!'}
+                        </div>
+                        <p style={{ marginBottom: '20px' }}>
+                          Move your piece <strong>{gameState.spinnerResult.spaces} spaces forward</strong> OR 
+                          move an opponent's piece <strong>{gameState.spinnerResult.spaces} spaces back</strong>.
+                        </p>
+                        <div className="spinner-options">
+                          <button
+                            onClick={() => handleSpinnerChoice('forward')}
+                            className="spinner-btn"
+                            disabled={isHandlingSpinner}
+                            style={{ 
+                              backgroundColor: '#4CAF50',
+                              opacity: isHandlingSpinner ? 0.6 : 1,
+                              cursor: isHandlingSpinner ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            Move Forward {gameState.spinnerResult.spaces} Spaces
+                          </button>
+                          <button
+                            onClick={() => handleSpinnerChoice('backward')}
+                            className="spinner-btn"
+                            disabled={isHandlingSpinner}
+                            style={{ 
+                              backgroundColor: '#F44336',
+                              opacity: isHandlingSpinner ? 0.6 : 1,
+                              cursor: isHandlingSpinner ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            Move Opponent Back {gameState.spinnerResult.spaces} Spaces
+                          </button>
+                        </div>
+                        <div className="spinner-note" style={{ marginTop: '15px', fontSize: '0.9em', color: '#666', fontStyle: 'italic' }}>
+                          Note: If you move forward and land on Orange/Red, you won't get another spin (no chain rule).
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

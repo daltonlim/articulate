@@ -123,6 +123,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('handle-spinner-choice', (data) => {
+    const { gameId, choice } = data;
+    const game = games.get(gameId);
+    
+    if (game) {
+      game.handleSpinnerChoice(choice);
+      io.to(gameId).emit('game-updated', { gameState: game.getState() });
+    }
+  });
+
   socket.on('draw-spade-card', (data) => {
     const { gameId } = data;
     const game = games.get(gameId);

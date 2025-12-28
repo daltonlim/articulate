@@ -18,6 +18,8 @@ class Game {
     this.nextTeamAfterBonus = null; // Track which team should play after bonus turn
     this.turnStartTime = null;
     this.turnDuration = turnDuration; // Timer duration in milliseconds (default 30 seconds)
+    this.pendingSpinner = null; // Track if spinner should be shown (team index and landing position)
+    this.spinnerResult = null; // Store the result of the spinner spin
     // Category cycle order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
     // Wildcard picks any random word from any category
     this.categoryCycle = ['Object', 'Action', 'Wildcard', 'World', 'Person', 'Random', 'Nature'];
@@ -121,15 +123,27 @@ class Game {
     } else {
       currentTeam.position = newPosition;
       
-      // If this was a bonus turn, move to the next team after bonus
-      // Otherwise, move to next team in normal rotation
-      if (this.isBonusTurn && this.nextTeamAfterBonus !== null) {
-        this.currentTeamIndex = this.nextTeamAfterBonus;
-        this.isBonusTurn = false;
-        this.nextTeamAfterBonus = null;
+      // Check if landing position triggers spinner (Orange/Action or Red/Random)
+      const landingCategory = this.getCategoryAtPosition(newPosition);
+      if (landingCategory === 'Action' || landingCategory === 'Random') {
+        // Trigger spinner - store team index and position
+        this.pendingSpinner = {
+          teamIndex: this.currentTeamIndex,
+          landingPosition: newPosition
+        };
+        // Don't advance to next team yet - wait for spinner to be resolved
       } else {
-        // Move to next team in normal rotation
-        this.currentTeamIndex = (this.currentTeamIndex + 1) % this.teams.length;
+        // No spinner, proceed normally
+        // If this was a bonus turn, move to the next team after bonus
+        // Otherwise, move to next team in normal rotation
+        if (this.isBonusTurn && this.nextTeamAfterBonus !== null) {
+          this.currentTeamIndex = this.nextTeamAfterBonus;
+          this.isBonusTurn = false;
+          this.nextTeamAfterBonus = null;
+        } else {
+          // Move to next team in normal rotation
+          this.currentTeamIndex = (this.currentTeamIndex + 1) % this.teams.length;
+        }
       }
     }
     
@@ -137,25 +151,120 @@ class Game {
     this.currentCard = null;
   }
 
+  getCategoryAtPosition(position) {
+    if (position >= this.board.totalSpaces) return null;
+    const categoryIndex = position % this.categoryCycle.length;
+    return this.categoryCycle[categoryIndex];
+  }
+
   spinSpinner() {
-    const currentTeam = this.teams[this.currentTeamIndex];
-    const spinResult = Math.random() < 0.5 ? 'wide' : 'narrow';
-    const spaces = 2 + Math.floor(Math.random() * 2); // 2 or 3 spaces
+    if (!this.pendingSpinner) return null;
     
-    if (spinResult === 'wide') {
-      // Move own team forward
-      currentTeam.position = Math.min(
-        currentTeam.position + spaces,
-        this.board.totalSpaces
-      );
+    const teamIndex = this.pendingSpinner.teamIndex;
+    const currentTeam = this.teams[teamIndex];
+    
+    // Spinner segments (matching physical spinner design):
+    // - Wide Green: 2 spaces (~37.5% chance, ~3/8 of circle)
+    // - Narrow Green: 3 spaces (~12.5% chance, ~1/8 of circle)
+    // - Orange/Red: No bonus (~50% chance, ~1/2 of circle)
+    const random = Math.random();
+    let result;
+    
+    if (random < 0.375) {
+      // Wide Green Segment - 2 spaces
+      result = { type: 'wide-green', spaces: 2 };
+    } else if (random < 0.5) {
+      // Narrow Green Segment - 3 spaces
+      result = { type: 'narrow-green', spaces: 3 };
     } else {
-      // Move opponent backward
-      const opponentIndex = (this.currentTeamIndex + 1) % this.teams.length;
-      const opponent = this.teams[opponentIndex];
-      opponent.position = Math.max(0, opponent.position - spaces);
+      // Orange or Red Segment - No bonus
+      result = { type: 'no-bonus', spaces: 0 };
     }
     
-    return { type: spinResult, spaces };
+    this.spinnerResult = result;
+    return result;
+  }
+
+  handleSpinnerChoice(choice) {
+    // choice: 'forward' or 'backward'
+    if (!this.pendingSpinner || !this.spinnerResult) return;
+    
+    const teamIndex = this.pendingSpinner.teamIndex;
+    const currentTeam = this.teams[teamIndex];
+    
+    // If no bonus, just end the spinner
+    if (this.spinnerResult.type === 'no-bonus') {
+      this.pendingSpinner = null;
+      this.spinnerResult = null;
+      
+      // Move to next team in normal rotation (advance from the team that used the spinner)
+      if (this.isBonusTurn && this.nextTeamAfterBonus !== null) {
+        this.currentTeamIndex = this.nextTeamAfterBonus;
+        this.isBonusTurn = false;
+        this.nextTeamAfterBonus = null;
+      } else {
+        // Advance from the team that used the spinner
+        this.currentTeamIndex = (teamIndex + 1) % this.teams.length;
+      }
+      return;
+    }
+    
+    const spaces = this.spinnerResult.spaces;
+    const landingPosition = this.pendingSpinner.landingPosition;
+    
+    if (choice === 'forward') {
+      // Move own team forward
+      const newPosition = Math.min(landingPosition + spaces, this.board.totalSpaces);
+      currentTeam.position = newPosition;
+      
+      // Check if reached finish
+      if (newPosition >= this.board.totalSpaces) {
+        // Team wins if they got at least one word in their turn
+        // (We can't check this here, so we'll let them continue)
+        currentTeam.position = this.board.totalSpaces;
+      }
+      
+      // Advance category
+      currentTeam.currentCategoryIndex = (currentTeam.currentCategoryIndex + spaces) % this.categoryCycle.length;
+      
+      // No chain rule: Even if new position is Orange/Red, no additional spin
+    } else if (choice === 'backward') {
+      // Move an opponent backward
+      // Find the opponent with highest position (usually the leader)
+      let opponentToMove = null;
+      let maxPosition = -1;
+      
+      for (let i = 0; i < this.teams.length; i++) {
+        if (i !== teamIndex && this.teams[i].position > maxPosition) {
+          maxPosition = this.teams[i].position;
+          opponentToMove = this.teams[i];
+        }
+      }
+      
+      if (opponentToMove) {
+        // Can't move opponent back past Start (position 0)
+        const newPosition = Math.max(0, opponentToMove.position - spaces);
+        opponentToMove.position = newPosition;
+        
+        // Adjust category index for opponent (moving backward)
+        // This is a bit tricky - we'll just recalculate based on position
+        opponentToMove.currentCategoryIndex = newPosition % this.categoryCycle.length;
+      }
+    }
+    
+    // Clear spinner state
+    this.pendingSpinner = null;
+    this.spinnerResult = null;
+    
+    // Move to next team in normal rotation (advance from the team that used the spinner)
+    if (this.isBonusTurn && this.nextTeamAfterBonus !== null) {
+      this.currentTeamIndex = this.nextTeamAfterBonus;
+      this.isBonusTurn = false;
+      this.nextTeamAfterBonus = null;
+    } else {
+      // Advance from the team that used the spinner
+      this.currentTeamIndex = (teamIndex + 1) % this.teams.length;
+    }
   }
 
   drawSpadeCard() {
@@ -199,7 +308,9 @@ class Game {
         ? Math.max(0, this.turnDuration - (Date.now() - this.turnStartTime))
         : null,
       turnDuration: this.turnDuration,
-      categoryCycle: this.categoryCycle
+      categoryCycle: this.categoryCycle,
+      pendingSpinner: this.pendingSpinner,
+      spinnerResult: this.spinnerResult
     };
   }
 }
