@@ -5,10 +5,15 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
   const [teamNames, setTeamNames] = useState(['Team 1', 'Team 2']);
   const [joinGameId, setJoinGameId] = useState('');
   const [mode, setMode] = useState('create'); // 'create' or 'join'
+  const [timerDuration, setTimerDuration] = useState(30); // Timer duration in seconds
 
   const handleCreateGame = (e) => {
     e.preventDefault();
-    onCreateGame(teamNames);
+    // Ensure timer duration is valid (default to 30 if invalid)
+    const validTimerDuration = (typeof timerDuration === 'number' && timerDuration >= 10 && timerDuration <= 120) 
+      ? timerDuration 
+      : 30;
+    onCreateGame(teamNames, validTimerDuration);
   };
 
   const handleJoinGame = (e) => {
@@ -90,6 +95,38 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
                 + Add Team
               </button>
             </div>
+            <div className="timer-section">
+              <label htmlFor="timer-duration">Timer Duration (seconds):</label>
+              <input
+                id="timer-duration"
+                type="number"
+                min="10"
+                max="120"
+                value={timerDuration}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    setTimerDuration('');
+                  } else {
+                    const numValue = parseInt(value, 10);
+                    if (!isNaN(numValue)) {
+                      setTimerDuration(numValue);
+                    }
+                  }
+                }}
+                onBlur={(e) => {
+                  const value = parseInt(e.target.value, 10);
+                  if (isNaN(value) || value < 10) {
+                    setTimerDuration(10);
+                  } else if (value > 120) {
+                    setTimerDuration(120);
+                  } else {
+                    setTimerDuration(value);
+                  }
+                }}
+                className="timer-input"
+              />
+            </div>
             <button type="submit" className="primary-btn" disabled={!isConnected}>
               Create Game
             </button>
@@ -117,7 +154,7 @@ function GameSetup({ onCreateGame, onJoinGame, isConnected }) {
         <div className="quick-rules">
           <h3>Quick Rules</h3>
           <ul>
-            <li>Describe words to your team in 30 seconds</li>
+            <li>Describe words to your team within the timer</li>
             <li>No "sounds like", "starts with", or parts of the word</li>
             <li>Move forward based on correct guesses</li>
             <li>First team to reach Finish wins!</li>

@@ -106,6 +106,26 @@
   gap: 10px;
 }
 
+.timer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timer-section label {
+  color: #333;
+  font-weight: 500;
+}
+
+.timer-input {
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1em;
+  min-height: 44px; /* Touch-friendly */
+  width: 100%;
+}
+
 .team-input {
   display: flex;
   gap: 10px;

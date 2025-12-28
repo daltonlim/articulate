@@ -61,13 +61,17 @@ function GamePlay({
         });
       }, 1000);
     } else if (timeRemaining === 0 && gameState?.currentTurn) {
-      // Timer ended, but don't auto-end turn - let user click End Turn
+      // Timer ended, automatically end the turn
       setIsTimerRunning(false);
+      onEndTurn(correctCount);
+      const timerSeconds = gameState?.turnDuration ? Math.ceil(gameState.turnDuration / 1000) : 30;
+      setTimeRemaining(timerSeconds);
+      setCorrectCount(0);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerRunning, timeRemaining, gameState]);
+  }, [isTimerRunning, timeRemaining, gameState, correctCount, onEndTurn]);
 
   // Check for spade (Wildcard category) after turn ends
   // Note: When a turn ends, currentTeamIndex is already incremented to the next team
@@ -108,14 +112,16 @@ function GamePlay({
   }, [gameState, showSpadeModal, spadeHandledForPosition]);
 
   const handleStartTurn = () => {
-    setTimeRemaining(30);
+    const timerSeconds = gameState?.turnDuration ? Math.ceil(gameState.turnDuration / 1000) : 30;
+    setTimeRemaining(timerSeconds);
     setCorrectCount(0);
     onStartTurn();
   };
 
   const handleEndTurn = () => {
     onEndTurn(correctCount);
-    setTimeRemaining(30);
+    const timerSeconds = gameState?.turnDuration ? Math.ceil(gameState.turnDuration / 1000) : 30;
+    setTimeRemaining(timerSeconds);
     setCorrectCount(0);
     setIsTimerRunning(false);
   };
@@ -152,27 +158,15 @@ function GamePlay({
     setTimeout(() => setIsHandlingSpade(false), 1000);
   };
 
-  const handleSpadeSkip = () => {
+  const handleSpadePass = () => {
     if (isHandlingSpade) return; // Prevent multiple clicks
     setIsHandlingSpade(true);
     
-    // Close modal immediately to prevent re-triggering
-    setShowSpadeModal(false);
-    
-    // Mark this position as handled to prevent re-opening the modal
-    if (gameState?.teams && gameState.currentTeamIndex !== undefined) {
-      const previousTeamIndex = (gameState.currentTeamIndex - 1 + gameState.teams.length) % gameState.teams.length;
-      const teamThatJustMoved = gameState.teams[previousTeamIndex];
-      if (teamThatJustMoved) {
-        const positionKey = `${previousTeamIndex}-${teamThatJustMoved.position}`;
-        setSpadeHandledForPosition(positionKey);
-      }
-    }
-    
-    onHandleSpade(null); // Pass null to skip
+    // Reroll the word instead of clearing it
+    onDrawSpadeCard();
     
     // Reset after a short delay to allow server to process
-    setTimeout(() => setIsHandlingSpade(false), 1000);
+    setTimeout(() => setIsHandlingSpade(false), 500);
   };
 
   if (!gameState) return null;
@@ -324,8 +318,8 @@ function GamePlay({
                     </button>
                   ))}
                   <button
-                    onClick={handleSpadeSkip}
-                    className="spade-btn skip-btn"
+                    onClick={handleSpadePass}
+                    className="spade-btn pass-btn"
                     disabled={isHandlingSpade}
                     style={{ 
                       backgroundColor: '#999', 
@@ -334,7 +328,7 @@ function GamePlay({
                       cursor: isHandlingSpade ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    Skip
+                    Pass
                   </button>
                 </div>
               </div>

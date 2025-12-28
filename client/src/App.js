@@ -50,8 +50,8 @@ function App() {
     };
   }, []);
 
-  const createGame = (teamNames) => {
-    socket.emit('create-game', { teamNames });
+  const createGame = (teamNames, turnDuration) => {
+    socket.emit('create-game', { teamNames, turnDuration });
   };
 
   const joinGame = (gameIdToJoin) => {

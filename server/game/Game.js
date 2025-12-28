@@ -3,7 +3,7 @@ const Team = require('./Team');
 const Card = require('./Card');
 
 class Game {
-  constructor(gameId, teamNames, words) {
+  constructor(gameId, teamNames, words, turnDuration = 30000) {
     this.gameId = gameId;
     this.words = words;
     this.board = new Board();
@@ -17,7 +17,7 @@ class Game {
     this.isBonusTurn = false; // Track if current turn is a bonus turn from spade
     this.nextTeamAfterBonus = null; // Track which team should play after bonus turn
     this.turnStartTime = null;
-    this.turnDuration = 30000; // 30 seconds in milliseconds
+    this.turnDuration = turnDuration; // Timer duration in milliseconds (default 30 seconds)
     // Category cycle order: Object -> Action -> Wildcard -> World -> Person -> Random -> Nature
     // Wildcard picks any random word from any category
     this.categoryCycle = ['Object', 'Action', 'Wildcard', 'World', 'Person', 'Random', 'Nature'];
@@ -198,6 +198,7 @@ class Game {
       turnTimeRemaining: this.turnStartTime 
         ? Math.max(0, this.turnDuration - (Date.now() - this.turnStartTime))
         : null,
+      turnDuration: this.turnDuration,
       categoryCycle: this.categoryCycle
     };
   }

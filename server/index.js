@@ -41,7 +41,8 @@ io.on('connection', (socket) => {
 
   socket.on('create-game', (data) => {
     const gameId = generateGameId();
-    const game = new Game(gameId, data.teamNames || ['Team 1', 'Team 2'], words);
+    const turnDuration = data.turnDuration ? parseInt(data.turnDuration, 10) * 1000 : 30000; // Convert seconds to milliseconds
+    const game = new Game(gameId, data.teamNames || ['Team 1', 'Team 2'], words, turnDuration);
     games.set(gameId, game);
     socket.join(gameId);
     socket.emit('game-created', { gameId, gameState: game.getState() });
