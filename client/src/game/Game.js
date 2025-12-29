@@ -214,8 +214,9 @@ class Game {
     return result;
   }
 
-  handleSpinnerChoice(choice) {
+  handleSpinnerChoice(choice, selectedTeamIndex) {
     // choice: 'forward' or 'backward'
+    // selectedTeamIndex: index of the team to move
     if (!this.pendingSpinner || !this.spinnerResult) return;
     
     const teamIndex = this.pendingSpinner.teamIndex;
@@ -238,49 +239,44 @@ class Game {
       return;
     }
     
+    // Validate selectedTeamIndex
+    if (selectedTeamIndex === undefined || selectedTeamIndex === null || 
+        selectedTeamIndex < 0 || selectedTeamIndex >= this.teams.length) {
+      return; // Invalid team index
+    }
+    
     const spaces = this.spinnerResult.spaces;
-    const landingPosition = this.pendingSpinner.landingPosition;
+    const teamToMove = this.teams[selectedTeamIndex];
     
     if (choice === 'forward') {
-      // Move own team forward
-      const newPosition = Math.min(landingPosition + spaces, this.board.totalSpaces);
-      currentTeam.position = newPosition;
+      // Move selected team forward
+      const currentPosition = teamToMove.position;
+      const newPosition = Math.min(currentPosition + spaces, this.board.totalSpaces);
+      teamToMove.position = newPosition;
       
       // Check if reached finish
       if (newPosition >= this.board.totalSpaces) {
         // Enter final challenge state instead of winning immediately
-        currentTeam.position = this.board.totalSpaces;
+        teamToMove.position = this.board.totalSpaces;
         this.finalChallenge = {
-          teamIndex: teamIndex
+          teamIndex: selectedTeamIndex
         };
       }
       
       // Advance category
-      currentTeam.currentCategoryIndex = (currentTeam.currentCategoryIndex + spaces) % this.categoryCycle.length;
+      teamToMove.currentCategoryIndex = (teamToMove.currentCategoryIndex + spaces) % this.categoryCycle.length;
       
       // No chain rule: Even if new position is Orange/Red, no additional spin
     } else if (choice === 'backward') {
-      // Move an opponent backward
-      // Find the opponent with highest position (usually the leader)
-      let opponentToMove = null;
-      let maxPosition = -1;
+      // Move selected team backward
+      const currentPosition = teamToMove.position;
+      // Can't move team back past Start (position 0)
+      const newPosition = Math.max(0, currentPosition - spaces);
+      teamToMove.position = newPosition;
       
-      for (let i = 0; i < this.teams.length; i++) {
-        if (i !== teamIndex && this.teams[i].position > maxPosition) {
-          maxPosition = this.teams[i].position;
-          opponentToMove = this.teams[i];
-        }
-      }
-      
-      if (opponentToMove) {
-        // Can't move opponent back past Start (position 0)
-        const newPosition = Math.max(0, opponentToMove.position - spaces);
-        opponentToMove.position = newPosition;
-        
-        // Adjust category index for opponent (moving backward)
-        // This is a bit tricky - we'll just recalculate based on position
-        opponentToMove.currentCategoryIndex = newPosition % this.categoryCycle.length;
-      }
+      // Adjust category index (moving backward)
+      // Recalculate based on position
+      teamToMove.currentCategoryIndex = newPosition % this.categoryCycle.length;
     }
     
     // Clear spinner state

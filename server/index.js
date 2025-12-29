@@ -124,11 +124,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('handle-spinner-choice', (data) => {
-    const { gameId, choice } = data;
+    const { gameId, choice, teamIndex } = data;
     const game = games.get(gameId);
     
     if (game) {
-      game.handleSpinnerChoice(choice);
+      game.handleSpinnerChoice(choice, teamIndex);
       io.to(gameId).emit('game-updated', { gameState: game.getState() });
     }
   });

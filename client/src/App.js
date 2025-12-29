@@ -186,11 +186,11 @@ function App() {
     }
   };
 
-  const handleSpinnerChoice = (choice) => {
+  const handleSpinnerChoice = (choice, teamIndex) => {
     if (useServer && isConnected) {
-      socket.emit('handle-spinner-choice', { gameId, choice });
+      socket.emit('handle-spinner-choice', { gameId, choice, teamIndex });
     } else if (localGame) {
-      localGame.handleSpinnerChoice(choice);
+      localGame.handleSpinnerChoice(choice, teamIndex);
       updateLocalGameState();
     }
   };

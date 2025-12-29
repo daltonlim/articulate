@@ -27,6 +27,8 @@ function GamePlay({
   const [isHandlingSpinner, setIsHandlingSpinner] = useState(false);
   const [showControlTurnModal, setShowControlTurnModal] = useState(false);
   const [isHandlingControlTurn, setIsHandlingControlTurn] = useState(false);
+  const [selectedSpinnerTeam, setSelectedSpinnerTeam] = useState(null);
+  const [spinnerDirection, setSpinnerDirection] = useState(null);
 
   // Helper functions - defined before use
   const getCategoryForPosition = (position, board, categoryCycle) => {
@@ -101,6 +103,9 @@ function GamePlay({
       // Show spinner modal when pendingSpinner exists
       setShowSpinnerModal(true);
       setIsSpinning(false); // Reset spinning state when modal first shows
+      // Reset selection state when modal opens
+      setSelectedSpinnerTeam(null);
+      setSpinnerDirection(null);
     }
     
     // When spinner result arrives, stop showing "Spinning..."
@@ -112,6 +117,9 @@ function GamePlay({
     if (!gameState?.pendingSpinner && showSpinnerModal) {
       setShowSpinnerModal(false);
       setIsSpinning(false);
+      // Reset selection state when modal closes
+      setSelectedSpinnerTeam(null);
+      setSpinnerDirection(null);
     }
   }, [gameState, showSpinnerModal]);
 
@@ -219,18 +227,33 @@ function GamePlay({
     onSpinSpinner();
   };
 
-  const handleSpinnerChoice = (choice) => {
+  const handleSpinnerChoice = (choice, teamIndex) => {
     if (isHandlingSpinner) return; // Prevent multiple clicks
     setIsHandlingSpinner(true);
     
     // Close modal immediately
     setShowSpinnerModal(false);
     
-    // Send choice to server
-    onHandleSpinnerChoice(choice);
+    // Reset selection state
+    setSelectedSpinnerTeam(null);
+    setSpinnerDirection(null);
+    
+    // Send choice and teamIndex to server
+    onHandleSpinnerChoice(choice, teamIndex);
     
     // Reset after a short delay to allow server to process
     setTimeout(() => setIsHandlingSpinner(false), 1000);
+  };
+
+  const handleSpinnerTeamSelection = (direction, teamIndex) => {
+    setSpinnerDirection(direction);
+    setSelectedSpinnerTeam(teamIndex);
+  };
+
+  const handleConfirmSpinnerChoice = () => {
+    if (selectedSpinnerTeam !== null && spinnerDirection !== null) {
+      handleSpinnerChoice(spinnerDirection, selectedSpinnerTeam);
+    }
   };
 
   const handleControlTurnGuess = (guessingTeamIndex) => {
@@ -424,7 +447,11 @@ function GamePlay({
                         <div style={{ fontSize: '1.5em', marginBottom: '10px' }}>❌ No Bonus</div>
                         <p>The arrow landed on Orange or Red. Your turn ends here.</p>
                         <button
-                          onClick={() => handleSpinnerChoice('no-bonus')}
+                          onClick={() => {
+                            setSelectedSpinnerTeam(null);
+                            setSpinnerDirection(null);
+                            handleSpinnerChoice('no-bonus', null);
+                          }}
                           className="spinner-btn"
                           disabled={isHandlingSpinner}
                           style={{ 
@@ -443,35 +470,99 @@ function GamePlay({
                           {gameState.spinnerResult.type === 'wide-green' ? '🟢 Wide Green Segment!' : '🟢 Narrow Green Segment!'}
                         </div>
                         <p style={{ marginBottom: '20px' }}>
-                          Move your piece <strong>{gameState.spinnerResult.spaces} spaces forward</strong> OR 
-                          move an opponent's piece <strong>{gameState.spinnerResult.spaces} spaces back</strong>.
+                          Choose a team to move <strong>{gameState.spinnerResult.spaces} spaces forward</strong> OR 
+                          <strong> {gameState.spinnerResult.spaces} spaces back</strong>.
                         </p>
-                        <div className="spinner-options">
-                          <button
-                            onClick={() => handleSpinnerChoice('forward')}
-                            className="spinner-btn"
-                            disabled={isHandlingSpinner}
-                            style={{ 
-                              backgroundColor: '#4CAF50',
-                              opacity: isHandlingSpinner ? 0.6 : 1,
-                              cursor: isHandlingSpinner ? 'not-allowed' : 'pointer'
-                            }}
-                          >
-                            Move Forward {gameState.spinnerResult.spaces} Spaces
-                          </button>
-                          <button
-                            onClick={() => handleSpinnerChoice('backward')}
-                            className="spinner-btn"
-                            disabled={isHandlingSpinner}
-                            style={{ 
-                              backgroundColor: '#F44336',
-                              opacity: isHandlingSpinner ? 0.6 : 1,
-                              cursor: isHandlingSpinner ? 'not-allowed' : 'pointer'
-                            }}
-                          >
-                            Move Opponent Back {gameState.spinnerResult.spaces} Spaces
-                          </button>
-                        </div>
+                        
+                        {!spinnerDirection ? (
+                          <div className="spinner-options" style={{ marginBottom: '20px' }}>
+                            <div style={{ marginBottom: '15px', fontWeight: 'bold' }}>Choose direction:</div>
+                            <button
+                              onClick={() => setSpinnerDirection('forward')}
+                              className="spinner-btn"
+                              disabled={isHandlingSpinner}
+                              style={{ 
+                                backgroundColor: '#4CAF50',
+                                opacity: isHandlingSpinner ? 0.6 : 1,
+                                cursor: isHandlingSpinner ? 'not-allowed' : 'pointer',
+                                marginRight: '10px'
+                              }}
+                            >
+                              Move Forward {gameState.spinnerResult.spaces} Spaces
+                            </button>
+                            <button
+                              onClick={() => setSpinnerDirection('backward')}
+                              className="spinner-btn"
+                              disabled={isHandlingSpinner}
+                              style={{ 
+                                backgroundColor: '#F44336',
+                                opacity: isHandlingSpinner ? 0.6 : 1,
+                                cursor: isHandlingSpinner ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              Move Back {gameState.spinnerResult.spaces} Spaces
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="spinner-options">
+                            <div style={{ marginBottom: '15px', fontWeight: 'bold' }}>
+                              Choose which team to move {spinnerDirection === 'forward' ? 'forward' : 'back'}:
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
+                              {gameState.teams.map((team) => (
+                                <button
+                                  key={team.index}
+                                  onClick={() => handleSpinnerTeamSelection(spinnerDirection, team.index)}
+                                  className="spinner-btn"
+                                  disabled={isHandlingSpinner}
+                                  style={{ 
+                                    backgroundColor: selectedSpinnerTeam === team.index ? '#2196F3' : '#E0E0E0',
+                                    color: selectedSpinnerTeam === team.index ? 'white' : 'black',
+                                    opacity: isHandlingSpinner ? 0.6 : 1,
+                                    cursor: isHandlingSpinner ? 'not-allowed' : 'pointer',
+                                    padding: '12px 20px',
+                                    fontSize: '1em'
+                                  }}
+                                >
+                                  {team.name} {selectedSpinnerTeam === team.index ? '✓' : ''}
+                                </button>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              <button
+                                onClick={handleConfirmSpinnerChoice}
+                                className="spinner-btn"
+                                disabled={isHandlingSpinner || selectedSpinnerTeam === null}
+                                style={{ 
+                                  backgroundColor: selectedSpinnerTeam !== null ? '#4CAF50' : '#999',
+                                  opacity: (isHandlingSpinner || selectedSpinnerTeam === null) ? 0.6 : 1,
+                                  cursor: (isHandlingSpinner || selectedSpinnerTeam === null) ? 'not-allowed' : 'pointer',
+                                  padding: '12px 20px',
+                                  fontSize: '1em'
+                                }}
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSpinnerDirection(null);
+                                  setSelectedSpinnerTeam(null);
+                                }}
+                                className="spinner-btn"
+                                disabled={isHandlingSpinner}
+                                style={{ 
+                                  backgroundColor: '#999',
+                                  opacity: isHandlingSpinner ? 0.6 : 1,
+                                  cursor: isHandlingSpinner ? 'not-allowed' : 'pointer',
+                                  padding: '12px 20px',
+                                  fontSize: '1em'
+                                }}
+                              >
+                                Back
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         <div className="spinner-note" style={{ marginTop: '15px', fontSize: '0.9em', color: '#666', fontStyle: 'italic' }}>
                           Note: If you move forward and land on Orange/Red, you won't get another spin (no chain rule).
                         </div>
@@ -531,7 +622,7 @@ function GamePlay({
                       cursor: isHandlingSpade ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    Pass
+                    Re-roll word
                   </button>
                 </div>
               </div>
