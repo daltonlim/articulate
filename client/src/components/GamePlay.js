@@ -328,9 +328,13 @@ function GamePlay({
             </h3>
             <div 
               className="category-badge"
-              style={{ backgroundColor: getCategoryColor(currentCategory) }}
+              style={{ 
+                backgroundColor: getCategoryColor(currentCategory),
+                color: currentCategory === 'Wildcard' ? '#333' : 'white',
+                border: currentCategory === 'Wildcard' ? '2px solid #ddd' : 'none'
+              }}
             >
-              {currentCategory}
+              {currentCategory === 'Wildcard' ? '♠ Wildcard' : currentCategory}
             </div>
           </div>
 
@@ -373,8 +377,12 @@ function GamePlay({
 
               {currentCard && (
                 <div className="card-display">
-                  <div className="card-category" style={{ backgroundColor: getCategoryColor(currentCard.category) }}>
-                    {currentCard.category}
+                  <div className="card-category" style={{ 
+                    backgroundColor: getCategoryColor(currentCard.category),
+                    color: currentCard.category === 'Wildcard' ? '#333' : 'white',
+                    border: currentCard.category === 'Wildcard' ? '2px solid #ddd' : 'none'
+                  }}>
+                    {currentCard.category === 'Wildcard' ? '♠ Wildcard' : currentCard.category}
                   </div>
                   <div className="card-word">
                     {currentCard.word}
@@ -588,10 +596,11 @@ function GamePlay({
                       borderRadius: '4px',
                       display: 'inline-block',
                       marginBottom: '10px',
-                      color: 'white',
-                      fontWeight: 'bold'
+                      color: gameState.spadeCard.category === 'Wildcard' ? '#333' : 'white',
+                      fontWeight: 'bold',
+                      border: gameState.spadeCard.category === 'Wildcard' ? '2px solid #ddd' : 'none'
                     }}>
-                      {gameState.spadeCard.category}
+                      {gameState.spadeCard.category === 'Wildcard' ? '♠ Wildcard' : gameState.spadeCard.category}
                     </div>
                     <div className="spade-card-word" style={{ fontSize: '1.5em', fontWeight: 'bold', marginTop: '10px' }}>
                       {gameState.spadeCard.word}
