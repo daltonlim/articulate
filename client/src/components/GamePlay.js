@@ -159,7 +159,7 @@ function GamePlay({
     if (!gameState?.spadeCard && showSpadeModal) {
       setShowSpadeModal(false);
     }
-  }, [gameState, showSpadeModal, spadeHandledForPosition]);
+  }, [gameState, showSpadeModal, spadeHandledForPosition, onDrawSpadeCard]);
 
   const handleStartTurn = () => {
     const timerSeconds = gameState?.turnDuration ? Math.ceil(gameState.turnDuration / 1000) : 30;

@@ -189,9 +189,6 @@ class Game {
   spinSpinner() {
     if (!this.pendingSpinner) return null;
     
-    const teamIndex = this.pendingSpinner.teamIndex;
-    const currentTeam = this.teams[teamIndex];
-    
     // Spinner segments (matching physical spinner design):
     // - Wide Green: 2 spaces (~37.5% chance, ~3/8 of circle)
     // - Narrow Green: 3 spaces (~12.5% chance, ~1/8 of circle)
@@ -220,7 +217,6 @@ class Game {
     if (!this.pendingSpinner || !this.spinnerResult) return;
     
     const teamIndex = this.pendingSpinner.teamIndex;
-    const currentTeam = this.teams[teamIndex];
     
     // If no bonus, just end the spinner
     if (this.spinnerResult.type === 'no-bonus') {
